@@ -42,7 +42,7 @@ const ToDoList = () => {
     /////////////////////////////////////////////
 
     useEffect(() => {
-        let alreadyInTasklist = taskList.findIndex(task => task === newTask);
+        let alreadyInTasklist = taskList.findIndex(task => task.toLowerCase() === newTask.toLowerCase());
         if (alreadyInTasklist === -1) {
             setTaskExists(false);
         } else {
