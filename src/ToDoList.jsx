@@ -5,25 +5,25 @@ import TaskInput from './components/TaskInput';
 import TaskItem from './components/TaskItem';
 
 const ToDoList = () => {
-    const [newTask, setNewTask] = useState('');
+    const [newTask, setNewTask] = useState({ label: '', done: false });
     const [taskList, setTaskList] = useState([]);
     const [taskExists, setTaskExists] = useState(false);
-    const [editTask, setEditTask] = useState(null);
-    const [editedTask, setEditedTask] = useState('');
+    const [editTask, setEditTask] = useState('');
+    const [updatedTask, setUpdatedTask] = useState({ label: '', done: false });
 
     /////////////////////////////////////////////
     ////HELPER FUNCTIONS
     /////////////////////////////////////////////
 
     const takeInputValue = event => {
-        setNewTask(event.target.value);
+        setNewTask({ label: event.target.value, done: false });
     };
 
     const addTask = event => {
-        if (event.key.toLowerCase() === 'enter' && !taskExists && newTask !== '') {
+        if (event.key.toLowerCase() === 'enter' && !taskExists && newTask.label !== '') {
             setTaskList([...taskList, newTask]);
 
-            setNewTask('');
+            setNewTask({ label: '', done: false });
         }
     };
 
@@ -34,21 +34,102 @@ const ToDoList = () => {
     };
 
     const taskEditing = event => {
-        setEditedTask(event.target.value);
+        setUpdatedTask({ label: event.target.value, done: false });
+    };
+
+    const updateTask = (event, index) => {
+        if (event.key.toLowerCase() === 'enter' && taskExists === false) {
+            taskList.splice(index, 1, updatedTask);
+            setEditTask(null);
+            setUpdatedTask({ label: '', done: false });
+        }
+    };
+
+    const toggleCompleted = (completedTask, task) => {
+        if (task === completedTask) {
+            const updatedTasks = taskList.map(aTask => {
+                if (completedTask === aTask.label) {
+                    return {
+                        ...aTask,
+                        done: !aTask.done,
+                    };
+                } else {
+                    return aTask;
+                }
+            });
+            setTaskList(updatedTasks);
+        }
+    };
+
+    /////////////////////////////////////////////
+    ////FETCH/API FUNCTIONS
+    /////////////////////////////////////////////
+
+    const createUserList = async () => {
+        const createList = await fetch('https://assets.breatheco.de/apis/fake/todos/user/fersalamanca', {
+            method: 'POST',
+            body: [],
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        const response = await createList.json();
+        console.log('from createList: ', response);
+    };
+
+    const refreshTasks = async () => {
+        const updateTask = await fetch('https://assets.breatheco.de/apis/fake/todos/user/fersalamanca', {
+            method: 'PUT',
+            body: JSON.stringify(taskList),
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        const response = await updateTask.json();
+        console.log('response:', response);
+        //setTaskList(response);
+        console.log('from refreshTasks: ', taskList);
+    };
+
+    const fetchData = async () => {
+        const dataRequest = await fetch('https://assets.breatheco.de/apis/fake/todos/user/fersalamanca', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+        const dataResponse = await dataRequest.json();
+        console.log('from fetchData: ', dataResponse);
     };
 
     /////////////////////////////////////////////
     ////USE EFFECTS
     /////////////////////////////////////////////
 
+    //CHECKS IF ALREADY IN TASKLIST
     useEffect(() => {
-        let alreadyInTasklist = taskList.findIndex(task => task.toLowerCase() === newTask.toLowerCase());
+        let alreadyInTasklist = taskList.findIndex(
+            task => task.label.toLowerCase() === newTask.label.toLowerCase(),
+        );
         if (alreadyInTasklist === -1) {
             setTaskExists(false);
         } else {
             setTaskExists(true);
         }
     }, [newTask, taskList]);
+
+    //CREATES USER LIST
+    useEffect(() => {
+        createUserList();
+    }, []);
+
+    //GETS DATA FROM API AND UPDATES TASKLIST
+    useEffect(() => {
+        fetchData();
+        refreshTasks();
+    }, [taskList]);
 
     //RETRIEVES THE TODOS ON FIRST RENDER(PAGE REFRESH). HAS TO GO BEFORE SAVING TO LOCALSTORAGE OTHERWISE
     //IT DOESN'T WORK
@@ -81,38 +162,33 @@ const ToDoList = () => {
                     <TaskInput newTask={newTask} takeInputValue={takeInputValue} addTask={addTask} />
                     <ul className="list-group">
                         {taskList.map((task, index) => {
-                            //THIS HELPER FUNCTION IS HERE BECAUSE IT DEPENDS ON THE TASK INDEX
-                            const updateTask = event => {
-                                if (event.key.toLowerCase() === 'enter' && !taskExists) {
-                                    taskList.splice(index, 1, editedTask);
-                                    setEditTask(null);
-                                    setEditedTask('');
-                                }
-                            };
                             //CONDITIONAL RENDERING OF EITHER THE INPUT FOR EDITING OR THE TASK.
-                            if (editTask === task) {
+
+                            if (editTask === task.label) {
                                 return (
                                     <input
                                         key={index}
                                         className="form-control lead Task-muted mb-3 font-monospace"
-                                        type="Task"
-                                        placeholder="Edit task"
-                                        onKeyDown={updateTask}
-                                        onChange={taskEditing}
-                                        value={editedTask}
+                                        type="text"
+                                        placeholder={task.label}
+                                        onKeyDown={event => updateTask(event, index)}
+                                        onChange={event => taskEditing(event)}
+                                        value={updatedTask.label}
                                     ></input>
                                 );
-                            } else {
-                                return (
-                                    <TaskItem
-                                        key={index}
-                                        task={task}
-                                        index={index}
-                                        setEditTask={setEditTask}
-                                        removeTask={removeTask}
-                                    />
-                                );
                             }
+                            return (
+                                <TaskItem
+                                    key={index}
+                                    task={task.label}
+                                    index={index}
+                                    setEditTask={setEditTask}
+                                    removeTask={removeTask}
+                                    toggleCompleted={toggleCompleted}
+                                    taskDone={task.done}
+                                    updatedTaskDone={updatedTask.done}
+                                />
+                            );
                         })}
 
                         {taskList.length === 0 ? <NoTaskWarning /> : null}

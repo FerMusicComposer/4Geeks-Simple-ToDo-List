@@ -10,7 +10,7 @@ const TaskInput = ({ addTask, takeInputValue, newTask }) => {
                 placeholder="Add a task"
                 onChange={takeInputValue}
                 onKeyDown={addTask}
-                value={newTask}
+                value={newTask.label}
             ></input>
         </div>
     );
@@ -19,7 +19,7 @@ const TaskInput = ({ addTask, takeInputValue, newTask }) => {
 TaskInput.propTypes = {
     addTask: PropTypes.func,
     takeInputValue: PropTypes.func,
-    newTask: PropTypes.string,
+    newTask: PropTypes.object,
 };
 
 export default TaskInput;
